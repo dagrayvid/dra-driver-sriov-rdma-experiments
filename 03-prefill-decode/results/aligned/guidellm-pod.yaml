@@ -1,0 +1,190 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.129.3.246/23"],"mac_address":"0a:58:0a:81:03:f6","gateway_ips":["10.129.2.1"],"routes":[{"dest":"10.128.0.0/14","nextHop":"10.129.2.1"},{"dest":"172.30.0.0/16","nextHop":"10.129.2.1"},{"dest":"169.254.0.5/32","nextHop":"10.129.2.1"},{"dest":"100.64.0.0/16","nextHop":"10.129.2.1"}],"ip_address":"10.129.3.246/23","gateway_ip":"10.129.2.1","role":"primary"}}'
+    k8s.v1.cni.cncf.io/network-status: |-
+      [{
+          "name": "ovn-kubernetes",
+          "interface": "eth0",
+          "ips": [
+              "10.129.3.246"
+          ],
+          "mac": "0a:58:0a:81:03:f6",
+          "default": true,
+          "dns": {}
+      }]
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{},"name":"guidellm","namespace":"dra-sriov-test"},"spec":{"containers":[{"command":["/bin/bash","-c","sleep infinity"],"env":[{"name":"USER","value":"guidellm"}],"image":"ghcr.io/vllm-project/guidellm:v0.7.3","imagePullPolicy":"Always","name":"guidellm","resources":{"requests":{"cpu":"1","memory":"2Gi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"runAsUser":1000930000},"stdin":true,"tty":true,"volumeMounts":[{"mountPath":"/results","name":"results"},{"mountPath":"/scripts","name":"scripts"}]}],"securityContext":{"runAsNonRoot":true,"seLinuxOptions":{"level":"s0:c31,c0"},"seccompProfile":{"type":"RuntimeDefault"}},"volumes":[{"emptyDir":{},"name":"results"},{"configMap":{"defaultMode":493,"name":"guidellm-scripts"},"name":"scripts"}]}}
+    openshift.io/scc: crucible-openshell-sandbox
+    seccomp.security.alpha.kubernetes.io/pod: runtime/default
+    security.openshift.io/validated-scc-subject-type: user
+  creationTimestamp: "2026-09-03T19:32:14Z"
+  generation: 1
+  name: guidellm
+  namespace: dra-sriov-test
+  resourceVersion: "114695368"
+  uid: 4cf5ae23-95ab-4f14-bbe6-144b9b7dd684
+spec:
+  containers:
+  - command:
+    - /bin/bash
+    - -c
+    - sleep infinity
+    env:
+    - name: USER
+      value: guidellm
+    image: ghcr.io/vllm-project/guidellm:v0.7.3
+    imagePullPolicy: Always
+    name: guidellm
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      runAsUser: 1000930000
+    stdin: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    tty: true
+    volumeMounts:
+    - mountPath: /results
+      name: results
+    - mountPath: /scripts
+      name: scripts
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-5tz8k
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: a100-08
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext:
+    runAsNonRoot: true
+    seLinuxOptions:
+      level: s0:c31,c0
+    seccompProfile:
+      type: RuntimeDefault
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoSchedule
+    key: node.kubernetes.io/memory-pressure
+    operator: Exists
+  volumes:
+  - emptyDir: {}
+    name: results
+  - configMap:
+      defaultMode: 493
+      name: guidellm-scripts
+    name: scripts
+  - name: kube-api-access-5tz8k
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+      - configMap:
+          items:
+          - key: service-ca.crt
+            path: service-ca.crt
+          name: openshift-service-ca.crt
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2026-09-03T19:32:31Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2026-09-03T19:32:14Z"
+    observedGeneration: 1
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2026-09-03T19:32:31Z"
+    observedGeneration: 1
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2026-09-03T19:32:31Z"
+    observedGeneration: 1
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2026-09-03T19:32:14Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - allocatedResources:
+      cpu: "1"
+      memory: 2Gi
+    containerID: cri-o://8f456f27bdef300e722ab67892bb76fa0356d8532b010a094d75cfc26cf8c62b
+    image: ghcr.io/vllm-project/guidellm:v0.7.3
+    imageID: ghcr.io/vllm-project/guidellm@sha256:b24d7a03e64674a9a6f60c2937762465d7a6f3f3d8d55a1d99e8617e94e06b3e
+    lastState: {}
+    name: guidellm
+    ready: true
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2026-09-03T19:32:30Z"
+    user:
+      linux:
+        gid: 0
+        supplementalGroups:
+        - 0
+        uid: 1000930000
+    volumeMounts:
+    - mountPath: /results
+      name: results
+    - mountPath: /scripts
+      name: scripts
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-5tz8k
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 10.14.217.21
+  hostIPs:
+  - ip: 10.14.217.21
+  observedGeneration: 1
+  phase: Running
+  podIP: 10.129.3.246
+  podIPs:
+  - ip: 10.129.3.246
+  qosClass: Burstable
+  startTime: "2026-09-03T19:32:14Z"

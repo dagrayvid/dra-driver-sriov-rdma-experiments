@@ -1,0 +1,34 @@
+# Portable aligned allocation example. DRA may choose any available GPU and
+# SR-IOV VF as long as both devices publish the same PCIe-root attribute.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-nic-aligned
+  namespace: dra-sriov-test
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            count: 1
+        - name: vf
+          exactly:
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName == "cx6_vfs"'
+      constraints:
+        - requests: [gpu, vf]
+          matchAttribute: resource.kubernetes.io/pcieRoot
+      config:
+        - requests: [vf]
+          opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              kind: VfConfig
+              ifName: net1
+              netAttachDefName: cx6-vf

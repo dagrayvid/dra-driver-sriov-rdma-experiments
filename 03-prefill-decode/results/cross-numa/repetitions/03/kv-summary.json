@@ -1,0 +1,19 @@
+{
+  "aggregate_throughput_mb_s": 9605.003814458896,
+  "avg_descriptors": 32976.0,
+  "avg_mb_per_transfer": 1175.8119999999997,
+  "avg_post_time_ms": 1.3410390625,
+  "avg_xfer_time_ms": 122.416609375,
+  "first_metric_timestamp": "09-18 21:16:44",
+  "interval_avg_xfer_time_ms": {
+    "max": 139.983,
+    "median": 122.997,
+    "min": 106.937
+  },
+  "intervals": 51,
+  "last_metric_timestamp": "09-18 21:25:05",
+  "percentile_warning": "The weighted average of reported interval P90s is descriptive only; it is not a run-wide P90.",
+  "schema_version": 1,
+  "successful_transfers": 128,
+  "weighted_avg_reported_interval_p90_xfer_ms": 129.61424218750003
+}

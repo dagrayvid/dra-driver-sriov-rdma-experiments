@@ -1,0 +1,14 @@
+{
+  "aggregate_throughput_mb_s": 9612.641085443784,
+  "avg_descriptors": 32976.0,
+  "avg_mb_per_transfer": 1175.8125,
+  "avg_post_time_ms": 1.3861796875000019,
+  "avg_xfer_time_ms": 122.31940104166665,
+  "failed_notifications": 0,
+  "failed_transfers": 0,
+  "p90_warning": "Histogram P90 is reported as a bucket upper bound, not an exact quantile.",
+  "schema_version": 1,
+  "successful_transfers": 384,
+  "unit_note": "Byte histograms are converted with 2^20 bytes per reported MB to match vLLM's periodic KV Transfer log values.",
+  "xfer_time_p90_histogram_upper_bound_ms": 200.0
+}

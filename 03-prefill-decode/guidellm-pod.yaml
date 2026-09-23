@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: guidellm
+  namespace: dra-sriov-test
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                  - a100-04
+                  - a100-06
+  containers:
+    - name: guidellm
+      image: ghcr.io/vllm-project/guidellm:v0.7.3
+      imagePullPolicy: Always
+      command:
+        - /bin/bash
+        - -c
+        - sleep infinity
+      env:
+        - name: USER
+          value: guidellm
+      resources:
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      volumeMounts:
+        - name: results
+          mountPath: /results
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+    - name: results
+      emptyDir: {}

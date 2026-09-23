@@ -1,0 +1,16 @@
+GPU allocations visible to CUDA
+GPU    PCI_BDF        PCIE_ROOT      NUMA  
+GPU0   0000:0a:00.0   pci0000:00     0     
+
+SR-IOV VFs assigned to this pod
+IFACE    HCA          VF_BDF         PF_BDF         PCIE_ROOT      NUMA  
+net1     mlx5_9       0000:11:00.1   0000:11:00.0   pci0000:00     0     
+
+Physical-function uniqueness
+0000:11:00.0: PASS - used by net1
+
+Alignment by shared PCIe root (the DRA constraint)
+GPU0: PASS - root=pci0000:00 VF=net1
+
+PASS: every visible GPU has a same-root VF and every VF uses a distinct PF.
+validator_exit_status=0

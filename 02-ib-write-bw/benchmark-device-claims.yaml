@@ -1,0 +1,123 @@
+# Benchmark-only deterministic claims for the ib_write_bw topology experiment.
+# See aligned-resourceclaimtemplate.yaml for the portable aligned example.
+#
+# All three variants hold the physical NIC constant (VF 0000:11:00.1, PF
+# 0000:11:00.0) and change the GPU. These BDFs and PCIe roots are identical on
+# a100-04 and a100-06.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: ib-write-bw-aligned
+  namespace: dra-sriov-test
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            count: 1
+            selectors:
+              - cel:
+                  # A100 under pci0000:00 / NUMA 0.
+                  expression: 'device.attributes["resource.kubernetes.io"].pciBusID == "0000:0a:00.0"'
+        - name: vf
+          exactly:
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName == "cx6_vfs"'
+              - cel:
+                  # ConnectX-6 VF under pci0000:00 / NUMA 0.
+                  expression: 'device.attributes["resource.kubernetes.io"].pciBusID == "0000:11:00.1"'
+      constraints:
+        - requests: [gpu, vf]
+          matchAttribute: resource.kubernetes.io/pcieRoot
+      config:
+        - requests: [vf]
+          opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              kind: VfConfig
+              ifName: net1
+              netAttachDefName: cx6-vf
+---
+# Deliberately different-root but same-NUMA: the NIC remains under
+# pci0000:00 / NUMA 0, while the selected A100 is under pci0000:3e / NUMA 0.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: ib-write-bw-misaligned-same-numa
+  namespace: dra-sriov-test
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["resource.kubernetes.io"].pciBusID == "0000:4b:00.0"'
+        - name: vf
+          exactly:
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName == "cx6_vfs"'
+              - cel:
+                  expression: 'device.attributes["resource.kubernetes.io"].pciBusID == "0000:11:00.1"'
+      # No matchAttribute constraint: the selectors intentionally require
+      # different PCIe roots that are both attached to NUMA node 0.
+      config:
+        - requests: [vf]
+          opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              kind: VfConfig
+              ifName: net1
+              netAttachDefName: cx6-vf
+---
+# Deliberately cross-NUMA: the same NIC remains under pci0000:00 / NUMA 0,
+# while the selected A100 is under pci0000:b9 / NUMA 1.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: ib-write-bw-misaligned-cross-numa
+  namespace: dra-sriov-test
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["resource.kubernetes.io"].pciBusID == "0000:c3:00.0"'
+        - name: vf
+          exactly:
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName == "cx6_vfs"'
+              - cel:
+                  expression: 'device.attributes["resource.kubernetes.io"].pciBusID == "0000:11:00.1"'
+      # No matchAttribute constraint: the selectors intentionally require
+      # different PCIe roots and different NUMA nodes.
+      config:
+        - requests: [vf]
+          opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              kind: VfConfig
+              ifName: net1
+              netAttachDefName: cx6-vf

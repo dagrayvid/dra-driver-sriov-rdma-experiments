@@ -1,0 +1,17 @@
+case=same-numa
+server=dra-sriov-test/ib-write-bw-same-numa-server
+client=dra-sriov-test/ib-write-bw-same-numa-client
+server_ip=10.128.6.164
+runs=10
+message_size_bytes=8388608
+iterations=5000
+direction=reverse
+gpu_bdf=0000:4b:00.0
+gpu_root=pci0000:3e
+gpu_numa=0
+vf_bdf=0000:11:00.1
+pf_bdf=0000:11:00.0
+vf_root=pci0000:00
+vf_numa=0
+started_utc=2026-09-22T17:52:02Z
+completed_utc=2026-09-22T17:53:15Z

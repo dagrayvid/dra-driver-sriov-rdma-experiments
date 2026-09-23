@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ib-write-bw-aligned-server
+  namespace: dra-sriov-test
+  labels:
+    app: ib-write-bw
+    topology: aligned
+    role: server
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: a100-04
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 2
+  resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: ib-write-bw-aligned
+  containers:
+    - name: test
+      image: quay.io/dagray/rdma-tools:tiny
+      imagePullPolicy: Always
+      command: [sleep, infinity]
+      resources:
+        claims:
+          - name: devices
+      securityContext:
+        allowPrivilegeEscalation: true
+        runAsUser: 0
+        capabilities:
+          add: [NET_ADMIN, NET_RAW, IPC_LOCK]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ib-write-bw-aligned-client
+  namespace: dra-sriov-test
+  labels:
+    app: ib-write-bw
+    topology: aligned
+    role: client
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: a100-06
+  restartPolicy: Never
+  terminationGracePeriodSeconds: 2
+  resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: ib-write-bw-aligned
+  containers:
+    - name: test
+      image: quay.io/dagray/rdma-tools:tiny
+      imagePullPolicy: Always
+      command: [sleep, infinity]
+      resources:
+        claims:
+          - name: devices
+      securityContext:
+        allowPrivilegeEscalation: true
+        runAsUser: 0
+        capabilities:
+          add: [NET_ADMIN, NET_RAW, IPC_LOCK]

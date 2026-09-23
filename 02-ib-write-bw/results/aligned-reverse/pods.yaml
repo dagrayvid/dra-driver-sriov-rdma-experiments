@@ -1,0 +1,345 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.128.6.165/23"],"mac_address":"0a:58:0a:80:06:a5","gateway_ips":["10.128.6.1"],"routes":[{"dest":"10.128.0.0/14","nextHop":"10.128.6.1"},{"dest":"172.30.0.0/16","nextHop":"10.128.6.1"},{"dest":"169.254.0.5/32","nextHop":"10.128.6.1"},{"dest":"100.64.0.0/16","nextHop":"10.128.6.1"}],"ip_address":"10.128.6.165/23","gateway_ip":"10.128.6.1","role":"primary"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.6.165"
+            ],
+            "mac": "0a:58:0a:80:06:a5",
+            "default": true,
+            "dns": {}
+        }]
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{},"labels":{"app":"ib-write-bw","role":"server","topology":"aligned"},"name":"ib-write-bw-aligned-server","namespace":"dra-sriov-test"},"spec":{"containers":[{"command":["sleep","infinity"],"image":"quay.io/dagray/rdma-tools:tiny","imagePullPolicy":"Always","name":"test","resources":{"claims":[{"name":"devices"}]},"securityContext":{"allowPrivilegeEscalation":true,"capabilities":{"add":["NET_ADMIN","NET_RAW","IPC_LOCK"]},"runAsUser":0}}],"nodeSelector":{"kubernetes.io/hostname":"a100-04"},"resourceClaims":[{"name":"devices","resourceClaimTemplateName":"ib-write-bw-aligned"}],"restartPolicy":"Never","terminationGracePeriodSeconds":2}}
+      openshift.io/scc: nvidia-driver
+      security.openshift.io/validated-scc-subject-type: user
+    creationTimestamp: "2026-09-22T17:55:35Z"
+    generation: 1
+    labels:
+      app: ib-write-bw
+      role: server
+      topology: aligned
+    name: ib-write-bw-aligned-server
+    namespace: dra-sriov-test
+    resourceVersion: "167141172"
+    uid: 71d6e459-a497-4a33-bb64-556b2e576289
+  spec:
+    containers:
+    - command:
+      - sleep
+      - infinity
+      image: quay.io/dagray/rdma-tools:tiny
+      imagePullPolicy: Always
+      name: test
+      resources:
+        claims:
+        - name: devices
+      securityContext:
+        allowPrivilegeEscalation: true
+        capabilities:
+          add:
+          - NET_ADMIN
+          - NET_RAW
+          - IPC_LOCK
+        runAsUser: 0
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jpfzx
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: a100-04
+    nodeSelector:
+      kubernetes.io/hostname: a100-04
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: ib-write-bw-aligned
+    restartPolicy: Never
+    schedulerName: default-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 2
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-jpfzx
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:38Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:35Z"
+      observedGeneration: 1
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:38Z"
+      observedGeneration: 1
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:38Z"
+      observedGeneration: 1
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:35Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://e631411261202b16b4b1ca74c95baf3d5492717d5a9b13ec182917b1137b962c
+      image: quay.io/dagray/rdma-tools:tiny
+      imageID: quay.io/dagray/rdma-tools@sha256:c4d64bc2609461f14ba6096c4d18c0f9b1e14cb46b653eea5ff959cd64a7ba96
+      lastState: {}
+      name: test
+      ready: true
+      resources:
+        claims:
+        - name: devices
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2026-09-22T17:55:37Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          uid: 0
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-jpfzx
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.14.217.17
+    hostIPs:
+    - ip: 10.14.217.17
+    observedGeneration: 1
+    phase: Running
+    podIP: 10.128.6.165
+    podIPs:
+    - ip: 10.128.6.165
+    qosClass: BestEffort
+    resourceClaimStatuses:
+    - name: devices
+      resourceClaimName: ib-write-bw-aligned-server-devices-n88ht
+    startTime: "2026-09-22T17:55:35Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.131.5.103/23"],"mac_address":"0a:58:0a:83:05:67","gateway_ips":["10.131.4.1"],"routes":[{"dest":"10.128.0.0/14","nextHop":"10.131.4.1"},{"dest":"172.30.0.0/16","nextHop":"10.131.4.1"},{"dest":"169.254.0.5/32","nextHop":"10.131.4.1"},{"dest":"100.64.0.0/16","nextHop":"10.131.4.1"}],"ip_address":"10.131.5.103/23","gateway_ip":"10.131.4.1","role":"primary"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.131.5.103"
+            ],
+            "mac": "0a:58:0a:83:05:67",
+            "default": true,
+            "dns": {}
+        }]
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{},"labels":{"app":"ib-write-bw","role":"client","topology":"aligned"},"name":"ib-write-bw-aligned-client","namespace":"dra-sriov-test"},"spec":{"containers":[{"command":["sleep","infinity"],"image":"quay.io/dagray/rdma-tools:tiny","imagePullPolicy":"Always","name":"test","resources":{"claims":[{"name":"devices"}]},"securityContext":{"allowPrivilegeEscalation":true,"capabilities":{"add":["NET_ADMIN","NET_RAW","IPC_LOCK"]},"runAsUser":0}}],"nodeSelector":{"kubernetes.io/hostname":"a100-06"},"resourceClaims":[{"name":"devices","resourceClaimTemplateName":"ib-write-bw-aligned"}],"restartPolicy":"Never","terminationGracePeriodSeconds":2}}
+      openshift.io/scc: nvidia-driver
+      security.openshift.io/validated-scc-subject-type: user
+    creationTimestamp: "2026-09-22T17:55:35Z"
+    generation: 1
+    labels:
+      app: ib-write-bw
+      role: client
+      topology: aligned
+    name: ib-write-bw-aligned-client
+    namespace: dra-sriov-test
+    resourceVersion: "167141195"
+    uid: 1b13a842-a755-4d13-9599-95a02a2db6a2
+  spec:
+    containers:
+    - command:
+      - sleep
+      - infinity
+      image: quay.io/dagray/rdma-tools:tiny
+      imagePullPolicy: Always
+      name: test
+      resources:
+        claims:
+        - name: devices
+      securityContext:
+        allowPrivilegeEscalation: true
+        capabilities:
+          add:
+          - NET_ADMIN
+          - NET_RAW
+          - IPC_LOCK
+        runAsUser: 0
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-gwcxv
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: a100-06
+    nodeSelector:
+      kubernetes.io/hostname: a100-06
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: ib-write-bw-aligned
+    restartPolicy: Never
+    schedulerName: default-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 2
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-gwcxv
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:38Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:35Z"
+      observedGeneration: 1
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:38Z"
+      observedGeneration: 1
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:38Z"
+      observedGeneration: 1
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-22T17:55:35Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://a6d80153e07826ee16582c0a122b1f0fc5a1bd235dcacacf94950ff488e882c1
+      image: quay.io/dagray/rdma-tools:tiny
+      imageID: quay.io/dagray/rdma-tools@sha256:c4d64bc2609461f14ba6096c4d18c0f9b1e14cb46b653eea5ff959cd64a7ba96
+      lastState: {}
+      name: test
+      ready: true
+      resources:
+        claims:
+        - name: devices
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2026-09-22T17:55:37Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          uid: 0
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-gwcxv
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.14.217.19
+    hostIPs:
+    - ip: 10.14.217.19
+    observedGeneration: 1
+    phase: Running
+    podIP: 10.131.5.103
+    podIPs:
+    - ip: 10.131.5.103
+    qosClass: BestEffort
+    resourceClaimStatuses:
+    - name: devices
+      resourceClaimName: ib-write-bw-aligned-client-devices-f79zd
+    startTime: "2026-09-22T17:55:35Z"
+kind: List
+metadata:
+  resourceVersion: ""

@@ -1,0 +1,239 @@
+apiVersion: v1
+items:
+- apiVersion: resource.k8s.io/v1
+  kind: ResourceClaim
+  metadata:
+    annotations:
+      resource.kubernetes.io/pod-claim-name: devices
+    creationTimestamp: "2026-09-22T17:55:35Z"
+    finalizers:
+    - resource.kubernetes.io/delete-protection
+    generateName: ib-write-bw-aligned-client-devices-
+    name: ib-write-bw-aligned-client-devices-f79zd
+    namespace: dra-sriov-test
+    ownerReferences:
+    - apiVersion: v1
+      controller: true
+      kind: Pod
+      name: ib-write-bw-aligned-client
+      uid: 1b13a842-a755-4d13-9599-95a02a2db6a2
+    resourceVersion: "167141133"
+    uid: f265b731-4ef8-404c-84e6-270f635646d8
+  spec:
+    devices:
+      config:
+      - opaque:
+          driver: sriovnetwork.k8snetworkplumbingwg.io
+          parameters:
+            apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+            ifName: net1
+            kind: VfConfig
+            netAttachDefName: cx6-vf
+        requests:
+        - vf
+      constraints:
+      - matchAttribute: resource.kubernetes.io/pcieRoot
+        requests:
+        - gpu
+        - vf
+      requests:
+      - exactly:
+          allocationMode: ExactCount
+          count: 1
+          deviceClassName: gpu.nvidia.com
+          selectors:
+          - cel:
+              expression: device.attributes["resource.kubernetes.io"].pciBusID ==
+                "0000:0a:00.0"
+        name: gpu
+      - exactly:
+          allocationMode: ExactCount
+          count: 1
+          deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+          selectors:
+          - cel:
+              expression: device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName
+                == "cx6_vfs"
+          - cel:
+              expression: device.attributes["resource.kubernetes.io"].pciBusID ==
+                "0000:11:00.1"
+        name: vf
+  status:
+    allocation:
+      devices:
+        config:
+        - opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              ifName: net1
+              kind: VfConfig
+              netAttachDefName: cx6-vf
+          requests:
+          - vf
+          source: FromClaim
+        results:
+        - device: gpu-3
+          driver: gpu.nvidia.com
+          pool: a100-06
+          request: gpu
+        - device: 0000-11-00-1
+          driver: sriovnetwork.k8snetworkplumbingwg.io
+          pool: a100-06
+          request: vf
+      nodeSelector:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - a100-06
+    devices:
+    - conditions: null
+      data:
+        cniConfig:
+          cniVersion: 1.0.0
+          deviceID: "0000:11:00.1"
+          link_state: enable
+          logLevel: info
+          name: cx6-vf
+          type: ib-sriov
+        cniResult:
+          cniVersion: 1.1.0
+          interfaces:
+          - name: net1
+            sandbox: /var/run/netns/9aa84430-3147-4e5e-ad87-93ef8174ffb6
+        vfConfig:
+          apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+          ifName: net1
+          kind: VfConfig
+          netAttachDefName: cx6-vf
+      device: 0000-11-00-1
+      driver: sriovnetwork.k8snetworkplumbingwg.io
+      networkData:
+        interfaceName: net1
+      pool: a100-06
+    reservedFor:
+    - name: ib-write-bw-aligned-client
+      resource: pods
+      uid: 1b13a842-a755-4d13-9599-95a02a2db6a2
+- apiVersion: resource.k8s.io/v1
+  kind: ResourceClaim
+  metadata:
+    annotations:
+      resource.kubernetes.io/pod-claim-name: devices
+    creationTimestamp: "2026-09-22T17:55:35Z"
+    finalizers:
+    - resource.kubernetes.io/delete-protection
+    generateName: ib-write-bw-aligned-server-devices-
+    name: ib-write-bw-aligned-server-devices-n88ht
+    namespace: dra-sriov-test
+    ownerReferences:
+    - apiVersion: v1
+      controller: true
+      kind: Pod
+      name: ib-write-bw-aligned-server
+      uid: 71d6e459-a497-4a33-bb64-556b2e576289
+    resourceVersion: "167141124"
+    uid: 259bca73-da3d-49f6-abf6-012cc1c8117b
+  spec:
+    devices:
+      config:
+      - opaque:
+          driver: sriovnetwork.k8snetworkplumbingwg.io
+          parameters:
+            apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+            ifName: net1
+            kind: VfConfig
+            netAttachDefName: cx6-vf
+        requests:
+        - vf
+      constraints:
+      - matchAttribute: resource.kubernetes.io/pcieRoot
+        requests:
+        - gpu
+        - vf
+      requests:
+      - exactly:
+          allocationMode: ExactCount
+          count: 1
+          deviceClassName: gpu.nvidia.com
+          selectors:
+          - cel:
+              expression: device.attributes["resource.kubernetes.io"].pciBusID ==
+                "0000:0a:00.0"
+        name: gpu
+      - exactly:
+          allocationMode: ExactCount
+          count: 1
+          deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+          selectors:
+          - cel:
+              expression: device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName
+                == "cx6_vfs"
+          - cel:
+              expression: device.attributes["resource.kubernetes.io"].pciBusID ==
+                "0000:11:00.1"
+        name: vf
+  status:
+    allocation:
+      devices:
+        config:
+        - opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              ifName: net1
+              kind: VfConfig
+              netAttachDefName: cx6-vf
+          requests:
+          - vf
+          source: FromClaim
+        results:
+        - device: gpu-3
+          driver: gpu.nvidia.com
+          pool: a100-04
+          request: gpu
+        - device: 0000-11-00-1
+          driver: sriovnetwork.k8snetworkplumbingwg.io
+          pool: a100-04
+          request: vf
+      nodeSelector:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - a100-04
+    devices:
+    - conditions: null
+      data:
+        cniConfig:
+          cniVersion: 1.0.0
+          deviceID: "0000:11:00.1"
+          link_state: enable
+          logLevel: info
+          name: cx6-vf
+          type: ib-sriov
+        cniResult:
+          cniVersion: 1.1.0
+          interfaces:
+          - name: net1
+            sandbox: /var/run/netns/e0ff8c17-7612-44e7-a8df-eddc7e0ce32b
+        vfConfig:
+          apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+          ifName: net1
+          kind: VfConfig
+          netAttachDefName: cx6-vf
+      device: 0000-11-00-1
+      driver: sriovnetwork.k8snetworkplumbingwg.io
+      networkData:
+        interfaceName: net1
+      pool: a100-04
+    reservedFor:
+    - name: ib-write-bw-aligned-server
+      resource: pods
+      uid: 71d6e459-a497-4a33-bb64-556b2e576289
+kind: List
+metadata:
+  resourceVersion: ""

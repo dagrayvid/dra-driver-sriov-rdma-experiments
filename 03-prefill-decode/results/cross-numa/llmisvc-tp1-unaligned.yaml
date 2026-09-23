@@ -1,0 +1,73 @@
+# Same service name and serving configuration as llmisvc-tp1-aligned.yaml. The
+# only intended experimental change is the referenced device-claim template.
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: qwen38-27b-pd-tp1
+  namespace: dra-sriov-test
+spec:
+  replicas: 1
+  parallelism:
+    tensor: 1
+  model:
+    uri: hf://Qwen/Qwen3.8-27B
+    name: Qwen/Qwen3.8-27B
+  router:
+    route: {}
+    gateway: {}
+    scheduler:
+      template:
+        containers:
+          - name: main
+  template:
+    nodeSelector:
+      kubernetes.io/hostname: a100-06
+    resourceClaims:
+      - name: devices
+        resourceClaimTemplateName: qwen38-27b-tp1-unaligned-cross-numa-roots
+    volumes:
+      - name: kserve-provision-location
+        persistentVolumeClaim:
+          claimName: qwen38-27b-decode-model-cache
+    containers:
+      - name: main
+        env:
+          - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: VLLM_ADDITIONAL_ARGS
+            value: "--kv_transfer_config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}'"
+          - name: VLLM_SSM_CONV_STATE_LAYOUT
+            value: DS
+        resources:
+          claims:
+            - name: devices
+  prefill:
+    replicas: 1
+    parallelism:
+      tensor: 1
+    template:
+      nodeSelector:
+        kubernetes.io/hostname: a100-04
+      resourceClaims:
+        - name: devices
+          resourceClaimTemplateName: qwen38-27b-tp1-unaligned-cross-numa-roots
+      volumes:
+        - name: kserve-provision-location
+          persistentVolumeClaim:
+            claimName: qwen38-27b-prefill-model-cache
+      containers:
+        - name: main
+          env:
+            - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: VLLM_ADDITIONAL_ARGS
+              value: "--kv_transfer_config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}'"
+            - name: VLLM_SSM_CONV_STATE_LAYOUT
+              value: DS
+          resources:
+            claims:
+              - name: devices

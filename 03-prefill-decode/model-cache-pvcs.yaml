@@ -1,0 +1,27 @@
+# A single TopoLVM PVC cannot be mounted by workloads on two different nodes.
+# Use one node-local cache for each independently pinned serving role instead.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qwen38-27b-decode-model-cache
+  namespace: dra-sriov-test
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 150Gi
+  storageClassName: lvms-a100-tier1-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qwen38-27b-prefill-model-cache
+  namespace: dra-sriov-test
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 150Gi
+  storageClassName: lvms-a100-tier1-storage

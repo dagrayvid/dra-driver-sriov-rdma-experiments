@@ -1,0 +1,75 @@
+# TP1 benchmark claims. Both variants select a GPU from the same PCIe root;
+# aligned and unaligned placement differ only in the VF's PCIe root.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: qwen38-27b-tp1-aligned-roots
+  namespace: dra-sriov-test
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            count: 1
+            selectors:
+              - cel:
+                  # PCIe root pci0000:00 is on NUMA 0 on both target nodes.
+                  expression: 'device.attributes["resource.kubernetes.io"].pcieRoot == "pci0000:00"'
+        - name: vf
+          exactly:
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName == "cx6_vfs"'
+      constraints:
+        - requests: [gpu, vf]
+          matchAttribute: resource.kubernetes.io/pcieRoot
+      config:
+        - requests: [vf]
+          opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              kind: VfConfig
+              ifName: net1
+              netAttachDefName: cx6-vf
+---
+# Deliberately misaligned: select the GPU under pci0000:00/NUMA 0 and the VF
+# under pci0000:b9/NUMA 1.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: qwen38-27b-tp1-unaligned-cross-numa-roots
+  namespace: dra-sriov-test
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["resource.kubernetes.io"].pcieRoot == "pci0000:00"'
+        - name: vf
+          exactly:
+            deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+            count: 1
+            selectors:
+              - cel:
+                  expression: 'device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName == "cx6_vfs"'
+              - cel:
+                  expression: 'device.attributes["resource.kubernetes.io"].pcieRoot == "pci0000:b9"'
+      config:
+        - requests: [vf]
+          opaque:
+            driver: sriovnetwork.k8snetworkplumbingwg.io
+            parameters:
+              apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+              kind: VfConfig
+              ifName: net1
+              netAttachDefName: cx6-vf

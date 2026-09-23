@@ -1,0 +1,17 @@
+GPU allocations visible to CUDA
+GPU    PCI_BDF        PCIE_ROOT      NUMA  
+GPU0   0000:c3:00.0   pci0000:b9     1     
+
+SR-IOV VFs assigned to this pod
+IFACE    HCA          VF_BDF         PF_BDF         PCIE_ROOT      NUMA  
+net1     mlx5_9       0000:11:00.1   0000:11:00.0   pci0000:00     0     
+
+Physical-function uniqueness
+0000:11:00.0: PASS - used by net1
+
+Alignment by shared PCIe root (the DRA constraint)
+GPU0: FAIL - no assigned VF under pci0000:b9
+
+FAIL: GPU/VF root alignment or PF uniqueness validation failed.
+command terminated with exit code 1
+validator_exit_status=1

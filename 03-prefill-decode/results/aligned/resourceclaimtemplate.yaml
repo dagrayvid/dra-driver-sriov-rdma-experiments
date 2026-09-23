@@ -1,0 +1,49 @@
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"resource.k8s.io/v1","kind":"ResourceClaimTemplate","metadata":{"annotations":{},"name":"qwen38-27b-tp1-aligned-roots","namespace":"dra-sriov-test"},"spec":{"spec":{"devices":{"config":[{"opaque":{"driver":"sriovnetwork.k8snetworkplumbingwg.io","parameters":{"apiVersion":"sriovnetwork.k8snetworkplumbingwg.io/v1alpha1","ifName":"net1","kind":"VfConfig","netAttachDefName":"cx6-vf"}},"requests":["vf"]}],"constraints":[{"matchAttribute":"resource.kubernetes.io/pcieRoot","requests":["gpu","vf"]}],"requests":[{"exactly":{"count":1,"deviceClassName":"gpu.nvidia.com","selectors":[{"cel":{"expression":"device.attributes[\"resource.kubernetes.io\"].pcieRoot == \"pci0000:00\""}}]},"name":"gpu"},{"exactly":{"count":1,"deviceClassName":"sriovnetwork.k8snetworkplumbingwg.io","selectors":[{"cel":{"expression":"device.attributes[\"sriovnetwork.k8snetworkplumbingwg.io\"].resourceName == \"cx6_vfs\""}}]},"name":"vf"}]}}}}
+  creationTimestamp: "2026-09-03T20:02:40Z"
+  name: qwen38-27b-tp1-aligned-roots
+  namespace: dra-sriov-test
+  resourceVersion: "114746962"
+  uid: ab2784d8-5cdb-4ae7-b2b4-ebf64437a370
+spec:
+  metadata: {}
+  spec:
+    devices:
+      config:
+      - opaque:
+          driver: sriovnetwork.k8snetworkplumbingwg.io
+          parameters:
+            apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+            ifName: net1
+            kind: VfConfig
+            netAttachDefName: cx6-vf
+        requests:
+        - vf
+      constraints:
+      - matchAttribute: resource.kubernetes.io/pcieRoot
+        requests:
+        - gpu
+        - vf
+      requests:
+      - exactly:
+          allocationMode: ExactCount
+          count: 1
+          deviceClassName: gpu.nvidia.com
+          selectors:
+          - cel:
+              expression: device.attributes["resource.kubernetes.io"].pcieRoot ==
+                "pci0000:00"
+        name: gpu
+      - exactly:
+          allocationMode: ExactCount
+          count: 1
+          deviceClassName: sriovnetwork.k8snetworkplumbingwg.io
+          selectors:
+          - cel:
+              expression: device.attributes["sriovnetwork.k8snetworkplumbingwg.io"].resourceName
+                == "cx6_vfs"
+        name: vf

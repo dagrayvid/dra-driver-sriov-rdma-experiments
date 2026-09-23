@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-09-18T16:57:49-04:00",
+  "namespace": "dra-sriov-test",
+  "overall_gpu_nic_alignment": {
+    "cross NUMA": 2
+  },
+  "pf_uniqueness": {
+    "a100-04": {
+      "duplicates": [],
+      "selected": 1,
+      "unique": 1
+    },
+    "a100-06": {
+      "duplicates": [],
+      "selected": 1,
+      "unique": 1
+    }
+  },
+  "pods": [
+    {
+      "gpu_nic_alignment": {
+        "cross NUMA": 1
+      },
+      "gpu_numa": {
+        "0": 1
+      },
+      "gpu_pair_locality": {},
+      "gpu_roots": {
+        "pci0000:00": 1
+      },
+      "node": "a100-06",
+      "phase": "Running",
+      "pod": "qwen38-27b-pd-tp1-kserve-84cfdbd584-khgd9",
+      "ranks": [
+        {
+          "alignment": "cross NUMA",
+          "gpu": {
+            "device": "gpu-2",
+            "driver": "gpu.nvidia.com",
+            "numa": 0,
+            "pci": "0000:07:00.0",
+            "pf": null,
+            "pool": "a100-06",
+            "request": "gpu",
+            "root": "pci0000:00"
+          },
+          "rank": 0,
+          "vf": {
+            "device": "0000-ca-00-1",
+            "driver": "sriovnetwork.k8snetworkplumbingwg.io",
+            "numa": 1,
+            "pci": "0000:ca:00.1",
+            "pf": "0000:ca:00.0",
+            "pool": "a100-06",
+            "request": "vf",
+            "root": "pci0000:b9"
+          }
+        }
+      ],
+      "ready": "2/2",
+      "role": "decode",
+      "tp": 1
+    },
+    {
+      "gpu_nic_alignment": {
+        "cross NUMA": 1
+      },
+      "gpu_numa": {
+        "0": 1
+      },
+      "gpu_pair_locality": {},
+      "gpu_roots": {
+        "pci0000:00": 1
+      },
+      "node": "a100-04",
+      "phase": "Running",
+      "pod": "qwen38-27b-pd-tp1-kserve-prefill-69966df4fd-kdjjs",
+      "ranks": [
+        {
+          "alignment": "cross NUMA",
+          "gpu": {
+            "device": "gpu-3",
+            "driver": "gpu.nvidia.com",
+            "numa": 0,
+            "pci": "0000:0a:00.0",
+            "pf": null,
+            "pool": "a100-04",
+            "request": "gpu",
+            "root": "pci0000:00"
+          },
+          "rank": 0,
+          "vf": {
+            "device": "0000-c7-00-1",
+            "driver": "sriovnetwork.k8snetworkplumbingwg.io",
+            "numa": 1,
+            "pci": "0000:c7:00.1",
+            "pf": "0000:c7:00.0",
+            "pool": "a100-04",
+            "request": "vf",
+            "root": "pci0000:b9"
+          }
+        }
+      ],
+      "ready": "1/1",
+      "role": "prefill",
+      "tp": 1
+    }
+  ],
+  "root_numa_conflicts": [],
+  "service": "qwen38-27b-pd-tp1",
+  "unallocated_claims": []
+}

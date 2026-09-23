@@ -1,0 +1,212 @@
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.kserve.io/v1alpha2","kind":"LLMInferenceService","metadata":{"annotations":{},"name":"qwen38-27b-pd-tp1","namespace":"dra-sriov-test"},"spec":{"model":{"name":"Qwen/Qwen3.8-27B","uri":"hf://Qwen/Qwen3.8-27B"},"parallelism":{"tensor":1},"prefill":{"parallelism":{"tensor":1},"replicas":1,"template":{"containers":[{"env":[{"name":"VLLM_NIXL_SIDE_CHANNEL_HOST","valueFrom":{"fieldRef":{"fieldPath":"status.podIP"}}},{"name":"VLLM_ADDITIONAL_ARGS","value":"--kv_transfer_config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}'"},{"name":"VLLM_SSM_CONV_STATE_LAYOUT","value":"DS"}],"name":"main","resources":{"claims":[{"name":"devices"}]}}],"nodeSelector":{"kubernetes.io/hostname":"a100-04"},"resourceClaims":[{"name":"devices","resourceClaimTemplateName":"qwen38-27b-tp1-unaligned-cross-numa-roots"}],"volumes":[{"name":"kserve-provision-location","persistentVolumeClaim":{"claimName":"qwen38-27b-prefill-model-cache"}}]}},"replicas":1,"router":{"gateway":{},"route":{},"scheduler":{"template":{"containers":[{"name":"main"}]}}},"template":{"containers":[{"env":[{"name":"VLLM_NIXL_SIDE_CHANNEL_HOST","valueFrom":{"fieldRef":{"fieldPath":"status.podIP"}}},{"name":"VLLM_ADDITIONAL_ARGS","value":"--kv_transfer_config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}'"},{"name":"VLLM_SSM_CONV_STATE_LAYOUT","value":"DS"}],"name":"main","resources":{"claims":[{"name":"devices"}]}}],"nodeSelector":{"kubernetes.io/hostname":"a100-06"},"resourceClaims":[{"name":"devices","resourceClaimTemplateName":"qwen38-27b-tp1-unaligned-cross-numa-roots"}],"volumes":[{"name":"kserve-provision-location","persistentVolumeClaim":{"claimName":"qwen38-27b-decode-model-cache"}}]}}}
+  creationTimestamp: "2026-09-18T20:45:35Z"
+  finalizers:
+  - serving.kserve.io/llmisvc-finalizer
+  generation: 1
+  name: qwen38-27b-pd-tp1
+  namespace: dra-sriov-test
+  resourceVersion: "156743529"
+  uid: 4db7ce1d-5b46-473c-8928-5dc5db8558eb
+spec:
+  model:
+    name: Qwen/Qwen3.8-27B
+    uri: hf://Qwen/Qwen3.8-27B
+  parallelism:
+    tensor: 1
+  prefill:
+    parallelism:
+      tensor: 1
+    replicas: 1
+    template:
+      containers:
+      - env:
+        - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: VLLM_ADDITIONAL_ARGS
+          value: --kv_transfer_config '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
+        - name: VLLM_SSM_CONV_STATE_LAYOUT
+          value: DS
+        name: main
+        resources:
+          claims:
+          - name: devices
+      nodeSelector:
+        kubernetes.io/hostname: a100-04
+      resourceClaims:
+      - name: devices
+        resourceClaimTemplateName: qwen38-27b-tp1-unaligned-cross-numa-roots
+      volumes:
+      - name: kserve-provision-location
+        persistentVolumeClaim:
+          claimName: qwen38-27b-prefill-model-cache
+  replicas: 1
+  router:
+    gateway: {}
+    route: {}
+    scheduler:
+      template:
+        containers:
+        - name: main
+          resources: {}
+  template:
+    containers:
+    - env:
+      - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+      - name: VLLM_ADDITIONAL_ARGS
+        value: --kv_transfer_config '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
+      - name: VLLM_SSM_CONV_STATE_LAYOUT
+        value: DS
+      name: main
+      resources:
+        claims:
+        - name: devices
+    nodeSelector:
+      kubernetes.io/hostname: a100-06
+    resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: qwen38-27b-tp1-unaligned-cross-numa-roots
+    volumes:
+    - name: kserve-provision-location
+      persistentVolumeClaim:
+        claimName: qwen38-27b-decode-model-cache
+status:
+  addresses:
+  - models:
+    - name: publishers/dra-sriov-test/models/Qwen/Qwen3.8-27B
+    name: gateway-internal-model-routing
+    origin:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: openshift-ai-inference
+      namespace: openshift-ingress
+    url: http://openshift-ai-inference-openshift-default.openshift-ingress.svc.cluster.local/
+  - models:
+    - name: publishers/dra-sriov-test/models/Qwen/Qwen3.8-27B
+    - name: Qwen/Qwen3.8-27B
+    name: gateway-internal
+    origin:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: openshift-ai-inference
+      namespace: openshift-ingress
+    url: http://openshift-ai-inference-openshift-default.openshift-ingress.svc.cluster.local/dra-sriov-test/qwen38-27b-pd-tp1
+  - models:
+    - name: publishers/dra-sriov-test/models/Qwen/Qwen3.8-27B
+    - name: Qwen/Qwen3.8-27B
+    name: gateway-internal
+    origin:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: openshift-ai-inference
+      namespace: openshift-ingress
+    url: http://openshift-ai-inference-openshift-default.openshift-ingress.svc.cluster.local/publishers/dra-sriov-test/models/Qwen/Qwen3.8-27B
+  annotations:
+    serving.kserve.io/config-llm-decode-template: v3-5-0-kserve-config-llm-decode-template
+    serving.kserve.io/config-llm-decode-worker-data-parallel: v3-5-0-kserve-config-llm-decode-worker-data-parallel
+    serving.kserve.io/config-llm-prefill-template: v3-5-0-kserve-config-llm-prefill-template
+    serving.kserve.io/config-llm-prefill-worker-data-parallel: v3-5-0-kserve-config-llm-prefill-worker-data-parallel
+    serving.kserve.io/config-llm-router-route: v3-5-0-kserve-config-llm-router-route
+    serving.kserve.io/config-llm-scheduler: v3-5-0-kserve-config-llm-scheduler
+    serving.kserve.io/config-llm-scheduler-latency-predictor: v3-5-0-kserve-config-llm-scheduler-latency-predictor
+    serving.kserve.io/config-llm-template: v3-5-0-kserve-config-llm-template
+    serving.kserve.io/config-llm-tokenizer: v3-5-0-kserve-config-llm-tokenizer
+    serving.kserve.io/config-llm-tracing: v3-5-0-kserve-config-llm-tracing
+    serving.kserve.io/config-llm-worker-data-parallel: v3-5-0-kserve-config-llm-worker-data-parallel
+  appliedConfigs:
+  - name: v3-5-0-kserve-config-llm-scheduler
+    namespace: redhat-ods-applications
+    source: Preset
+  - name: v3-5-0-kserve-config-llm-router-route
+    namespace: redhat-ods-applications
+    source: Preset
+  - name: v3-5-0-kserve-config-llm-prefill-template
+    namespace: redhat-ods-applications
+    source: Preset
+  - name: v3-5-0-kserve-config-llm-decode-template
+    namespace: redhat-ods-applications
+    source: Preset
+  conditions:
+  - lastTransitionTime: "2026-09-18T20:45:57Z"
+    severity: Info
+    status: "True"
+    type: HTTPRoutesReady
+  - lastTransitionTime: "2026-09-18T20:45:57Z"
+    severity: Info
+    status: "True"
+    type: InferencePoolReady
+  - lastTransitionTime: "2026-09-18T20:50:30Z"
+    severity: Info
+    status: "True"
+    type: MainWorkloadReady
+  - lastTransitionTime: "2026-09-18T20:50:20Z"
+    severity: Info
+    status: "True"
+    type: PrefillWorkloadReady
+  - lastTransitionTime: "2026-09-18T20:45:41Z"
+    severity: Info
+    status: "True"
+    type: PresetsCombined
+  - lastTransitionTime: "2026-09-18T20:50:30Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-09-18T20:46:12Z"
+    status: "True"
+    type: RouterReady
+  - lastTransitionTime: "2026-09-18T20:46:12Z"
+    severity: Info
+    status: "True"
+    type: SchedulerWorkloadReady
+  - lastTransitionTime: "2026-09-18T20:50:30Z"
+    status: "True"
+    type: WorkloadsReady
+  observedGeneration: 1
+  router:
+    gateways:
+    - group: gateway.networking.k8s.io
+      httpRoutes:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: qwen38-27b-pd-tp1-kserve-route
+        namespace: dra-sriov-test
+      kind: Gateway
+      name: openshift-ai-inference
+      namespace: openshift-ingress
+    scheduler:
+      inferencePool:
+        group: inference.networking.k8s.io
+        kind: InferencePool
+        name: qwen38-27b-pd-tp1-inference-pool
+      service:
+        group: ""
+        kind: Service
+        name: qwen38-27b-pd-tp1-epp-service
+  url: http://openshift-ai-inference-openshift-default.openshift-ingress.svc.cluster.local/dra-sriov-test/qwen38-27b-pd-tp1
+  workloads:
+    prefill:
+      apiGroup: apps
+      kind: Deployment
+      name: qwen38-27b-pd-tp1-kserve-prefill
+      readyReplicas: 1
+    primary:
+      apiGroup: apps
+      kind: Deployment
+      name: qwen38-27b-pd-tp1-kserve
+      readyReplicas: 1
+    scheduler:
+      apiGroup: apps
+      kind: Deployment
+      name: qwen38-27b-pd-tp1-kserve-router-scheduler
+      readyReplicas: 1
+    service:
+      kind: Service
+      name: qwen38-27b-pd-tp1-kserve-workload-svc

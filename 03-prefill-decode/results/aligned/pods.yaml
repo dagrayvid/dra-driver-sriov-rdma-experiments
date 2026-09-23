@@ -1,0 +1,1160 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.128.6.28/23"],"mac_address":"0a:58:0a:80:06:1c","gateway_ips":["10.128.6.1"],"routes":[{"dest":"10.128.0.0/14","nextHop":"10.128.6.1"},{"dest":"172.30.0.0/16","nextHop":"10.128.6.1"},{"dest":"169.254.0.5/32","nextHop":"10.128.6.1"},{"dest":"100.64.0.0/16","nextHop":"10.128.6.1"}],"ip_address":"10.128.6.28/23","gateway_ip":"10.128.6.1","role":"primary"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.128.6.28"
+            ],
+            "mac": "0a:58:0a:80:06:1c",
+            "default": true,
+            "dns": {}
+        }]
+      openshift.io/scc: restricted-v2
+      seccomp.security.alpha.kubernetes.io/pod: runtime/default
+      security.openshift.io/validated-scc-subject-type: user
+    creationTimestamp: "2026-09-17T20:39:09Z"
+    generateName: qwen38-27b-pd-tp1-kserve-prefill-bcbc95964-
+    generation: 1
+    labels:
+      app.kubernetes.io/component: llminferenceservice-workload-prefill
+      app.kubernetes.io/name: qwen38-27b-pd-tp1
+      app.kubernetes.io/part-of: llminferenceservice
+      kserve.io/component: workload
+      llm-d.ai/role: prefill
+      pod-template-hash: bcbc95964
+    name: qwen38-27b-pd-tp1-kserve-prefill-bcbc95964-7xgj5
+    namespace: dra-sriov-test
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: qwen38-27b-pd-tp1-kserve-prefill-bcbc95964
+      uid: c7cb5775-1272-40c6-b3b2-4d7ae5c1c820
+    resourceVersion: "153655362"
+    uid: e06af1e4-165f-4aeb-907b-e2400669b553
+  spec:
+    containers:
+    - command:
+      - /bin/bash
+      - -c
+      - |-
+        if [ -f /etc/profile.d/ibm-aiu-setup.sh ]; then
+          source /etc/profile.d/ibm-aiu-setup.sh
+        fi
+
+        if [ "$KSERVE_INFER_ROCE" = "true" ]; then
+          echo "Trying to infer RoCE configs ... "
+          grep -H . /sys/class/infiniband/*/ports/*/gids/* 2>/dev/null
+          grep -H . /sys/class/infiniband/*/ports/*/gid_attrs/types/* 2>/dev/null
+
+          cat /proc/driver/nvidia/params
+
+          KSERVE_INFER_IB_GID_INDEX_GREP=${KSERVE_INFER_IB_GID_INDEX_GREP:-"RoCE v2"}
+
+          echo "[Infer RoCE] Discovering active HCAs ..."
+          active_hcas=()
+          # Loop through all mlx5 devices found in sysfs
+          for hca_dir in /sys/class/infiniband/mlx5_*; do
+              # Ensure it's a directory before proceeding
+              if [ -d "$hca_dir" ]; then
+                  hca_name=$(basename "$hca_dir")
+                  port_state_file="$hca_dir/ports/1/state" # Assume port 1
+                  type_file="$hca_dir/ports/1/gid_attrs/types/*"
+
+                  echo "[Infer RoCE] Check if the port state file ${port_state_file} exists and contains 'ACTIVE'"
+                  if [ -f "$port_state_file" ] && grep -q "ACTIVE" "$port_state_file" && grep -q "${KSERVE_INFER_IB_GID_INDEX_GREP}" ${type_file} 2>/dev/null; then
+                      echo "[Infer RoCE] Found active HCA: $hca_name"
+                      active_hcas+=("$hca_name")
+                  else
+                      echo "[Infer RoCE] Skipping inactive or down HCA: $hca_name"
+                  fi
+              fi
+          done
+
+          # Check if we found any active HCAs
+          if [ ${#active_hcas[@]} -gt 0 ]; then
+              # Join the array elements with a comma
+              hca_port_pairs=()
+              for hca in "${active_hcas[@]}"; do
+                hca_port_pairs+=("${hca}:1")
+              done
+
+              active_hca_list=$(IFS=,; echo "${active_hcas[*]}")
+              hca_port_pairs_list=$(IFS=,; echo "${hca_port_pairs[*]}")
+              echo "[Infer RoCE] Setting active HCAs: ${active_hca_list}"
+              export NCCL_IB_HCA=${NCCL_IB_HCA:-${active_hca_list}}
+              export NVSHMEM_HCA_LIST=${NVSHMEM_HCA_LIST:-${hca_port_pairs_list}}
+              export UCX_NET_DEVICES=${UCX_NET_DEVICES:-${hca_port_pairs_list}}
+
+              echo "[Infer RoCE] NCCL_IB_HCA=${NCCL_IB_HCA}"
+              echo "[Infer RoCE] NVSHMEM_HCA_LIST=${NVSHMEM_HCA_LIST}"
+              echo "[Infer RoCE] UCX_NET_DEVICES=${UCX_NET_DEVICES}"
+          else
+              echo "[Infer RoCE] WARNING: No active RoCE HCAs found. NCCL_IB_HCA will not be set."
+          fi
+
+          if [ ${#active_hcas[@]} -gt 0 ]; then
+              echo "[Infer RoCE] Finding GID_INDEX for each active HCA (SR-IOV compatible)..."
+
+              # For SR-IOV environments, find the most common IPv4 RoCE v2 GID index across all HCAs
+              declare -A gid_index_count
+              declare -A hca_gid_index
+
+              for hca_name in "${active_hcas[@]}"; do
+                  echo "[Infer RoCE] Processing HCA: ${hca_name}"
+
+                  # Find all RoCE v2 IPv4 GIDs for this HCA and count by index
+                  for tpath in /sys/class/infiniband/${hca_name}/ports/1/gid_attrs/types/*; do
+                      if grep -q "${KSERVE_INFER_IB_GID_INDEX_GREP}" "$tpath" 2>/dev/null; then
+                          idx=$(basename "$tpath")
+                          gid_file="/sys/class/infiniband/${hca_name}/ports/1/gids/${idx}"
+                          # Check for IPv4 GID (contains ffff:)
+                          if [ -f "$gid_file" ] && grep -q "ffff:" "$gid_file"; then
+                              gid_value=$(cat "$gid_file" 2>/dev/null || echo "")
+                              echo "[Infer RoCE] Found IPv4 RoCE v2 GID for ${hca_name}: index=${idx}, gid=${gid_value}"
+                              hca_gid_index["${hca_name}"]="${idx}"
+                              gid_index_count["${idx}"]=$((${gid_index_count["${idx}"]} + 1))
+                              break  # Use first found IPv4 GID per HCA
+                          fi
+                      fi
+                  done
+              done
+
+              # Find the most common GID index (most likely to be consistent across nodes)
+              best_gid_index=""
+              max_count=0
+              for idx in "${!gid_index_count[@]}"; do
+                  count=${gid_index_count["${idx}"]}
+                  echo "[Infer RoCE] GID_INDEX ${idx} found on ${count} HCAs"
+                  if [ $count -gt $max_count ]; then
+                      max_count=$count
+                      best_gid_index="$idx"
+                  fi
+              done
+
+              # Use deterministic fallback if tied - prefer index 3 (SR-IOV standard)
+              if [ ${#gid_index_count[@]} -gt 1 ]; then
+                  echo "[Infer RoCE] Multiple GID indices found, selecting most common: ${best_gid_index}"
+                  # If there's a tie, prefer index 3 as it's most common in SR-IOV setups
+                  if [ -n "${gid_index_count['3']}" ] && [ "${gid_index_count['3']}" -eq "$max_count" ]; then
+                      best_gid_index="3"
+                      echo "[Infer RoCE] Using deterministic fallback: GID_INDEX=3 (SR-IOV standard)"
+                  fi
+              fi
+
+              # Check if GID_INDEX is already set via environment variables
+              if [ -n "${NCCL_IB_GID_INDEX}" ]; then
+                  echo "[Infer RoCE] Using pre-configured NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX} from environment"
+                  export NVSHMEM_IB_GID_INDEX=${NVSHMEM_IB_GID_INDEX:-$NCCL_IB_GID_INDEX}
+                  export UCX_IB_GID_INDEX=${UCX_IB_GID_INDEX:-$NCCL_IB_GID_INDEX}
+                  echo "[Infer RoCE] Using pre-configured GID_INDEX=${NCCL_IB_GID_INDEX} for NCCL, NVSHMEM, and UCX"
+              elif [ -n "$best_gid_index" ]; then
+                  echo "[Infer RoCE] Selected GID_INDEX: ${best_gid_index} (found on ${max_count} HCAs)"
+
+                  export NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX:-$best_gid_index}
+                  export NVSHMEM_IB_GID_INDEX=${NVSHMEM_IB_GID_INDEX:-$best_gid_index}
+                  export UCX_IB_GID_INDEX=${UCX_IB_GID_INDEX:-$best_gid_index}
+
+                  echo "[Infer RoCE] Exported GID_INDEX=${best_gid_index} for NCCL, NVSHMEM, and UCX"
+              else
+                  echo "[Infer RoCE] ERROR: No valid IPv4 ${KSERVE_INFER_IB_GID_INDEX_GREP} GID_INDEX found on any HCA."
+              fi
+          else
+              echo "[Infer RoCE] No active HCAs found, skipping GID_INDEX inference."
+          fi
+        fi
+
+        # --disable-access-log-for-endpoints landed in vLLM 0.16.0 (vllm-project/vllm#30011).
+        # Older versions still need the blanket --disable-uvicorn-access-log.
+        ACCESS_LOG_ARGS="--disable-uvicorn-access-log"
+        VLLM_VERSION=$(vllm --version 2>/dev/null | tail -1 | awk '{print $NF}')
+        echo "[access-log-detect] vllm version='${VLLM_VERSION}'"
+        if [[ "$VLLM_VERSION" =~ ^[0-9]+\.[0-9]+ ]] && [ "$(printf '%s\n%s\n' "0.16.0" "${VLLM_VERSION}" | sort -V | head -1)" = "0.16.0" ]; then
+          ACCESS_LOG_ARGS="--disable-access-log-for-endpoints /health,/metrics,/ping"
+        fi
+        echo "[access-log-detect] selected ACCESS_LOG_ARGS='${ACCESS_LOG_ARGS}'"
+
+        # --shutdown-timeout landed in vLLM 0.18.0 (vllm-project/vllm#36666).
+        SHUTDOWN_TIMEOUT_ARGS=""
+        if [[ "$VLLM_VERSION" =~ ^[0-9]+\.[0-9]+ ]] && [ "$(printf '%s\n%s\n' "0.18.0" "${VLLM_VERSION}" | sort -V | head -1)" = "0.18.0" ]; then
+          SHUTDOWN_TIMEOUT_ARGS="--shutdown-timeout 40"
+        fi
+
+        # --kv-transfer-config with OffloadingConnector requires vLLM 0.22.0+ (vllm-project/vllm#40020).
+        KV_TRANSFER_ARGS=""
+        if [[ "$VLLM_VERSION" =~ ^[0-9]+\.[0-9]+ ]] && [ "$(printf '%s\n%s\n' "0.22.0" "${VLLM_VERSION}" | sort -V | head -1)" = "0.22.0" ]; then
+          if [[ "${VLLM_ADDITIONAL_ARGS:-}" != *"--kv-transfer-config"* ]] && [[ "${VLLM_ADDITIONAL_ARGS:-}" != *"--kv_transfer_config"* ]] && [[ "$*" != *"--kv-transfer-config"* ]] && [[ "$*" != *"--kv_transfer_config"* ]]; then
+            KV_TRANSFER_ARGS=""
+          fi
+        fi
+
+        eval "exec vllm serve /mnt/models \
+          --served-model-name "Qwen/Qwen3.8-27B" \
+          --port 8000 \
+          ${ACCESS_LOG_ARGS} \
+          ${SHUTDOWN_TIMEOUT_ARGS} \
+          ${KV_TRANSFER_ARGS} \
+         --tensor-parallel-size 1 \
+          --enable-ssl-refresh \
+          --ssl-certfile /var/run/kserve/tls/tls.crt \
+          --ssl-keyfile /var/run/kserve/tls/tls.key \
+          ${VLLM_ADDITIONAL_ARGS} \
+          $@"
+      - --
+      env:
+      - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: status.podIP
+      - name: VLLM_ADDITIONAL_ARGS
+        value: --kv_transfer_config '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
+      - name: VLLM_SSM_CONV_STATE_LAYOUT
+        value: DS
+      - name: HOME
+        value: /home
+      - name: VLLM_LOGGING_LEVEL
+        value: INFO
+      - name: HF_HUB_CACHE
+        value: /models
+      image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:ba060ec145e1b7ac3a3b25b89fc75f7d146746156990ff5858235eaa9d158e32
+      imagePullPolicy: IfNotPresent
+      lifecycle:
+        preStop:
+          exec:
+            command:
+            - /bin/sleep
+            - "15"
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      name: main
+      ports:
+      - containerPort: 8000
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 2
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        periodSeconds: 1
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources:
+        claims:
+        - name: devices
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: false
+        runAsNonRoot: true
+        runAsUser: 1002620000
+        seccompProfile:
+          type: RuntimeDefault
+      startupProbe:
+        failureThreshold: 60
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /home
+        name: home
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /dev/shm
+        name: dshm
+      - mountPath: /models
+        name: model-cache
+      - mountPath: /var/run/kserve/tls
+        name: tls-certs
+        readOnly: true
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+        readOnly: true
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-vm4mz
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - args:
+      - hf://Qwen/Qwen3.8-27B
+      - /mnt/models
+      env:
+      - name: HF_HUB_ENABLE_HF_TRANSFER
+        value: "1"
+      - name: HF_XET_HIGH_PERFORMANCE
+        value: "1"
+      - name: HF_XET_NUM_CONCURRENT_RANGE_GETS
+        value: "8"
+      image: registry.redhat.io/rhoai/odh-kserve-storage-initializer-rhel9@sha256:0c14e5c65c86c1df8045e58cc8f465ee19f5e4daaf740f24a9619215820502ef
+      imagePullPolicy: IfNotPresent
+      name: storage-initializer
+      resources:
+        limits:
+          cpu: "1"
+          memory: 24Gi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        runAsNonRoot: true
+        runAsUser: 1002620000
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-vm4mz
+        readOnly: true
+    nodeName: a100-04
+    nodeSelector:
+      kubernetes.io/hostname: a100-04
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: qwen38-27b-tp1-aligned-roots
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 1002620000
+      seLinuxOptions:
+        level: s0:c51,c35
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 60
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoSchedule
+      key: node.kubernetes.io/memory-pressure
+      operator: Exists
+    volumes:
+    - name: kserve-provision-location
+      persistentVolumeClaim:
+        claimName: qwen38-27b-prefill-model-cache
+    - emptyDir: {}
+      name: home
+    - emptyDir: {}
+      name: tmp-dir
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 1Gi
+      name: dshm
+    - emptyDir: {}
+      name: model-cache
+    - name: tls-certs
+      secret:
+        defaultMode: 420
+        secretName: qwen38-27b-pd-tp1-kserve-self-signed-certs
+    - name: kube-api-access-vm4mz
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:39:11Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:39:11Z"
+      observedGeneration: 1
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:44:00Z"
+      observedGeneration: 1
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:44:00Z"
+      observedGeneration: 1
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:39:09Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://b28de9442ee280301213390df33e18ed3c86ffa4d2f6dbcbbe18b655ea87fe6d
+      image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:ba060ec145e1b7ac3a3b25b89fc75f7d146746156990ff5858235eaa9d158e32
+      imageID: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:5d4434598dc702b89c8d63b9fa6e2378130abf649c95f4211fb93e325cfd7698
+      lastState: {}
+      name: main
+      ready: true
+      resources:
+        claims:
+        - name: devices
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2026-09-17T20:39:12Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          - 1002620000
+          uid: 1002620000
+      volumeMounts:
+      - mountPath: /home
+        name: home
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /dev/shm
+        name: dshm
+      - mountPath: /models
+        name: model-cache
+      - mountPath: /var/run/kserve/tls
+        name: tls-certs
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-vm4mz
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.14.217.17
+    hostIPs:
+    - ip: 10.14.217.17
+    initContainerStatuses:
+    - allocatedResources:
+        cpu: 100m
+        memory: 100Mi
+      containerID: cri-o://ec5ed452aae73fe530571d119a35f52381d734ab6003ab712e235257997c049c
+      image: registry.redhat.io/rhoai/odh-kserve-storage-initializer-rhel9@sha256:0c14e5c65c86c1df8045e58cc8f465ee19f5e4daaf740f24a9619215820502ef
+      imageID: registry.redhat.io/rhoai/odh-kserve-storage-initializer-rhel9@sha256:0c14e5c65c86c1df8045e58cc8f465ee19f5e4daaf740f24a9619215820502ef
+      lastState: {}
+      name: storage-initializer
+      ready: true
+      resources:
+        limits:
+          cpu: "1"
+          memory: 24Gi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      restartCount: 0
+      started: false
+      state:
+        terminated:
+          containerID: cri-o://ec5ed452aae73fe530571d119a35f52381d734ab6003ab712e235257997c049c
+          exitCode: 0
+          finishedAt: "2026-09-17T20:39:11Z"
+          reason: Completed
+          startedAt: "2026-09-17T20:39:10Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          - 1002620000
+          uid: 1002620000
+      volumeMounts:
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-vm4mz
+        readOnly: true
+        recursiveReadOnly: Disabled
+    observedGeneration: 1
+    phase: Running
+    podIP: 10.128.6.28
+    podIPs:
+    - ip: 10.128.6.28
+    qosClass: Burstable
+    resourceClaimStatuses:
+    - name: devices
+      resourceClaimName: qwen38-27b-pd-tp1-kserve-prefill-bcbc95964-7xgj5-devices-6s2r7
+    startTime: "2026-09-17T20:39:09Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      k8s.ovn.org/pod-networks: '{"default":{"ip_addresses":["10.131.4.34/23"],"mac_address":"0a:58:0a:83:04:22","gateway_ips":["10.131.4.1"],"routes":[{"dest":"10.128.0.0/14","nextHop":"10.131.4.1"},{"dest":"172.30.0.0/16","nextHop":"10.131.4.1"},{"dest":"169.254.0.5/32","nextHop":"10.131.4.1"},{"dest":"100.64.0.0/16","nextHop":"10.131.4.1"}],"ip_address":"10.131.4.34/23","gateway_ip":"10.131.4.1","role":"primary"}}'
+      k8s.v1.cni.cncf.io/network-status: |-
+        [{
+            "name": "ovn-kubernetes",
+            "interface": "eth0",
+            "ips": [
+                "10.131.4.34"
+            ],
+            "mac": "0a:58:0a:83:04:22",
+            "default": true,
+            "dns": {}
+        }]
+      openshift.io/scc: restricted-v2
+      seccomp.security.alpha.kubernetes.io/pod: runtime/default
+      security.openshift.io/validated-scc-subject-type: user
+    creationTimestamp: "2026-09-17T20:39:09Z"
+    generateName: qwen38-27b-pd-tp1-kserve-6697f94486-
+    generation: 1
+    labels:
+      app.kubernetes.io/component: llminferenceservice-workload
+      app.kubernetes.io/name: qwen38-27b-pd-tp1
+      app.kubernetes.io/part-of: llminferenceservice
+      kserve.io/component: workload
+      llm-d.ai/role: decode
+      pod-template-hash: 6697f94486
+    name: qwen38-27b-pd-tp1-kserve-6697f94486-ptcdt
+    namespace: dra-sriov-test
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: qwen38-27b-pd-tp1-kserve-6697f94486
+      uid: 7fb13c98-5288-4d0a-97b2-e60923c7629f
+    resourceVersion: "153655046"
+    uid: 49346ebf-ee7f-4f8d-ac3f-ea481a541ae7
+  spec:
+    containers:
+    - command:
+      - /bin/bash
+      - -c
+      - |-
+        if [ -f /etc/profile.d/ibm-aiu-setup.sh ]; then
+          source /etc/profile.d/ibm-aiu-setup.sh
+        fi
+
+        if [ "$KSERVE_INFER_ROCE" = "true" ]; then
+          echo "Trying to infer RoCE configs ... "
+          grep -H . /sys/class/infiniband/*/ports/*/gids/* 2>/dev/null
+          grep -H . /sys/class/infiniband/*/ports/*/gid_attrs/types/* 2>/dev/null
+
+          cat /proc/driver/nvidia/params
+
+          KSERVE_INFER_IB_GID_INDEX_GREP=${KSERVE_INFER_IB_GID_INDEX_GREP:-"RoCE v2"}
+
+          echo "[Infer RoCE] Discovering active HCAs ..."
+          active_hcas=()
+          # Loop through all mlx5 devices found in sysfs
+          for hca_dir in /sys/class/infiniband/mlx5_*; do
+              # Ensure it's a directory before proceeding
+              if [ -d "$hca_dir" ]; then
+                  hca_name=$(basename "$hca_dir")
+                  port_state_file="$hca_dir/ports/1/state" # Assume port 1
+                  type_file="$hca_dir/ports/1/gid_attrs/types/*"
+
+                  echo "[Infer RoCE] Check if the port state file ${port_state_file} exists and contains 'ACTIVE'"
+                  if [ -f "$port_state_file" ] && grep -q "ACTIVE" "$port_state_file" && grep -q "${KSERVE_INFER_IB_GID_INDEX_GREP}" ${type_file} 2>/dev/null; then
+                      echo "[Infer RoCE] Found active HCA: $hca_name"
+                      active_hcas+=("$hca_name")
+                  else
+                      echo "[Infer RoCE] Skipping inactive or down HCA: $hca_name"
+                  fi
+              fi
+          done
+
+          # Check if we found any active HCAs
+          if [ ${#active_hcas[@]} -gt 0 ]; then
+              # Join the array elements with a comma
+              hca_port_pairs=()
+              for hca in "${active_hcas[@]}"; do
+                hca_port_pairs+=("${hca}:1")
+              done
+
+              active_hca_list=$(IFS=,; echo "${active_hcas[*]}")
+              hca_port_pairs_list=$(IFS=,; echo "${hca_port_pairs[*]}")
+              echo "[Infer RoCE] Setting active HCAs: ${active_hca_list}"
+              export NCCL_IB_HCA=${NCCL_IB_HCA:-${active_hca_list}}
+              export NVSHMEM_HCA_LIST=${NVSHMEM_HCA_LIST:-${hca_port_pairs_list}}
+              export UCX_NET_DEVICES=${UCX_NET_DEVICES:-${hca_port_pairs_list}}
+
+              echo "[Infer RoCE] NCCL_IB_HCA=${NCCL_IB_HCA}"
+              echo "[Infer RoCE] NVSHMEM_HCA_LIST=${NVSHMEM_HCA_LIST}"
+              echo "[Infer RoCE] UCX_NET_DEVICES=${UCX_NET_DEVICES}"
+          else
+              echo "[Infer RoCE] WARNING: No active RoCE HCAs found. NCCL_IB_HCA will not be set."
+          fi
+
+          if [ ${#active_hcas[@]} -gt 0 ]; then
+              echo "[Infer RoCE] Finding GID_INDEX for each active HCA (SR-IOV compatible)..."
+
+              # For SR-IOV environments, find the most common IPv4 RoCE v2 GID index across all HCAs
+              declare -A gid_index_count
+              declare -A hca_gid_index
+
+              for hca_name in "${active_hcas[@]}"; do
+                  echo "[Infer RoCE] Processing HCA: ${hca_name}"
+
+                  # Find all RoCE v2 IPv4 GIDs for this HCA and count by index
+                  for tpath in /sys/class/infiniband/${hca_name}/ports/1/gid_attrs/types/*; do
+                      if grep -q "${KSERVE_INFER_IB_GID_INDEX_GREP}" "$tpath" 2>/dev/null; then
+                          idx=$(basename "$tpath")
+                          gid_file="/sys/class/infiniband/${hca_name}/ports/1/gids/${idx}"
+                          # Check for IPv4 GID (contains ffff:)
+                          if [ -f "$gid_file" ] && grep -q "ffff:" "$gid_file"; then
+                              gid_value=$(cat "$gid_file" 2>/dev/null || echo "")
+                              echo "[Infer RoCE] Found IPv4 RoCE v2 GID for ${hca_name}: index=${idx}, gid=${gid_value}"
+                              hca_gid_index["${hca_name}"]="${idx}"
+                              gid_index_count["${idx}"]=$((${gid_index_count["${idx}"]} + 1))
+                              break  # Use first found IPv4 GID per HCA
+                          fi
+                      fi
+                  done
+              done
+
+              # Find the most common GID index (most likely to be consistent across nodes)
+              best_gid_index=""
+              max_count=0
+              for idx in "${!gid_index_count[@]}"; do
+                  count=${gid_index_count["${idx}"]}
+                  echo "[Infer RoCE] GID_INDEX ${idx} found on ${count} HCAs"
+                  if [ $count -gt $max_count ]; then
+                      max_count=$count
+                      best_gid_index="$idx"
+                  fi
+              done
+
+              # Use deterministic fallback if tied - prefer index 3 (SR-IOV standard)
+              if [ ${#gid_index_count[@]} -gt 1 ]; then
+                  echo "[Infer RoCE] Multiple GID indices found, selecting most common: ${best_gid_index}"
+                  # If there's a tie, prefer index 3 as it's most common in SR-IOV setups
+                  if [ -n "${gid_index_count['3']}" ] && [ "${gid_index_count['3']}" -eq "$max_count" ]; then
+                      best_gid_index="3"
+                      echo "[Infer RoCE] Using deterministic fallback: GID_INDEX=3 (SR-IOV standard)"
+                  fi
+              fi
+
+              # Check if GID_INDEX is already set via environment variables
+              if [ -n "${NCCL_IB_GID_INDEX}" ]; then
+                  echo "[Infer RoCE] Using pre-configured NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX} from environment"
+                  export NVSHMEM_IB_GID_INDEX=${NVSHMEM_IB_GID_INDEX:-$NCCL_IB_GID_INDEX}
+                  export UCX_IB_GID_INDEX=${UCX_IB_GID_INDEX:-$NCCL_IB_GID_INDEX}
+                  echo "[Infer RoCE] Using pre-configured GID_INDEX=${NCCL_IB_GID_INDEX} for NCCL, NVSHMEM, and UCX"
+              elif [ -n "$best_gid_index" ]; then
+                  echo "[Infer RoCE] Selected GID_INDEX: ${best_gid_index} (found on ${max_count} HCAs)"
+
+                  export NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX:-$best_gid_index}
+                  export NVSHMEM_IB_GID_INDEX=${NVSHMEM_IB_GID_INDEX:-$best_gid_index}
+                  export UCX_IB_GID_INDEX=${UCX_IB_GID_INDEX:-$best_gid_index}
+
+                  echo "[Infer RoCE] Exported GID_INDEX=${best_gid_index} for NCCL, NVSHMEM, and UCX"
+              else
+                  echo "[Infer RoCE] ERROR: No valid IPv4 ${KSERVE_INFER_IB_GID_INDEX_GREP} GID_INDEX found on any HCA."
+              fi
+          else
+              echo "[Infer RoCE] No active HCAs found, skipping GID_INDEX inference."
+          fi
+        fi
+
+        # --disable-access-log-for-endpoints landed in vLLM 0.16.0 (vllm-project/vllm#30011).
+        # Older versions still need the blanket --disable-uvicorn-access-log.
+        ACCESS_LOG_ARGS="--disable-uvicorn-access-log"
+        VLLM_VERSION=$(vllm --version 2>/dev/null | tail -1 | awk '{print $NF}')
+        echo "[access-log-detect] vllm version='${VLLM_VERSION}'"
+        if [[ "$VLLM_VERSION" =~ ^[0-9]+\.[0-9]+ ]] && [ "$(printf '%s\n%s\n' "0.16.0" "${VLLM_VERSION}" | sort -V | head -1)" = "0.16.0" ]; then
+          ACCESS_LOG_ARGS="--disable-access-log-for-endpoints /health,/metrics,/ping"
+        fi
+        echo "[access-log-detect] selected ACCESS_LOG_ARGS='${ACCESS_LOG_ARGS}'"
+
+        # --shutdown-timeout landed in vLLM 0.18.0 (vllm-project/vllm#36666).
+        SHUTDOWN_TIMEOUT_ARGS=""
+        if [[ "$VLLM_VERSION" =~ ^[0-9]+\.[0-9]+ ]] && [ "$(printf '%s\n%s\n' "0.18.0" "${VLLM_VERSION}" | sort -V | head -1)" = "0.18.0" ]; then
+          SHUTDOWN_TIMEOUT_ARGS="--shutdown-timeout 40"
+        fi
+
+        # --kv-transfer-config with OffloadingConnector requires vLLM 0.22.0+ (vllm-project/vllm#40020).
+        KV_TRANSFER_ARGS=""
+        if [[ "$VLLM_VERSION" =~ ^[0-9]+\.[0-9]+ ]] && [ "$(printf '%s\n%s\n' "0.22.0" "${VLLM_VERSION}" | sort -V | head -1)" = "0.22.0" ]; then
+          if [[ "${VLLM_ADDITIONAL_ARGS:-}" != *"--kv-transfer-config"* ]] && [[ "${VLLM_ADDITIONAL_ARGS:-}" != *"--kv_transfer_config"* ]] && [[ "$*" != *"--kv-transfer-config"* ]] && [[ "$*" != *"--kv_transfer_config"* ]]; then
+            KV_TRANSFER_ARGS=""
+          fi
+        fi
+
+        eval "exec vllm serve /mnt/models \
+          --served-model-name "Qwen/Qwen3.8-27B" "publishers/dra-sriov-test/models/Qwen/Qwen3.8-27B" \
+          --port 8001 \
+          ${ACCESS_LOG_ARGS} \
+          ${SHUTDOWN_TIMEOUT_ARGS} \
+          ${KV_TRANSFER_ARGS} \
+         --tensor-parallel-size 1 \
+          --enable-ssl-refresh \
+          --ssl-certfile /var/run/kserve/tls/tls.crt \
+          --ssl-keyfile /var/run/kserve/tls/tls.key \
+          ${VLLM_ADDITIONAL_ARGS} \
+          $@"
+      - --
+      env:
+      - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: status.podIP
+      - name: VLLM_ADDITIONAL_ARGS
+        value: --kv_transfer_config '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
+      - name: VLLM_SSM_CONV_STATE_LAYOUT
+        value: DS
+      - name: HOME
+        value: /home
+      - name: VLLM_LOGGING_LEVEL
+        value: INFO
+      - name: HF_HUB_CACHE
+        value: /models
+      image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:ba060ec145e1b7ac3a3b25b89fc75f7d146746156990ff5858235eaa9d158e32
+      imagePullPolicy: IfNotPresent
+      lifecycle:
+        preStop:
+          exec:
+            command:
+            - /bin/sleep
+            - "15"
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /health
+          port: 8001
+          scheme: HTTPS
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      name: main
+      ports:
+      - containerPort: 8001
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 2
+        httpGet:
+          path: /health
+          port: 8001
+          scheme: HTTPS
+        periodSeconds: 1
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources:
+        claims:
+        - name: devices
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: false
+        runAsNonRoot: true
+        runAsUser: 1002620000
+        seccompProfile:
+          type: RuntimeDefault
+      startupProbe:
+        failureThreshold: 60
+        httpGet:
+          path: /health
+          port: 8001
+          scheme: HTTPS
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /home
+        name: home
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /dev/shm
+        name: dshm
+      - mountPath: /models
+        name: model-cache
+      - mountPath: /var/run/kserve/tls
+        name: tls-certs
+        readOnly: true
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+        readOnly: true
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-5gvhv
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    initContainers:
+    - command:
+      - /app/pd-sidecar
+      - --port=8000
+      - --vllm-port=8001
+      - --kv-connector=nixlv2
+      - --enable-ssrf-protection=true
+      - --pool-group=inference.networking.x-k8s.io
+      - --inference-pool=dra-sriov-test/qwen38-27b-pd-tp1-inference-pool
+      - --secure-proxy=true
+      - --cert-path=/var/run/kserve/tls
+      - --enable-tls=decoder
+      - --enable-tls=prefiller
+      env:
+      - name: INFERENCE_POOL_NAMESPACE
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.namespace
+      - name: SSL_CERT_DIR
+        value: /var/run/kserve/tls:/var/run/secrets/kubernetes.io/serviceaccount:/etc/pki/tls/certs
+      - name: INFERENCE_POOL_NAME
+        value: qwen38-27b-pd-tp1-inference-pool
+      image: registry.redhat.io/rhoai/odh-llm-d-router-disagg-sidecar-rhel9@sha256:7fb626f057265afe80ffa26e7fb8389e2f18918579bc746bdc8145de3c7a26f1
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 10
+      name: llm-d-routing-sidecar
+      ports:
+      - containerPort: 8000
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /health
+          port: 8000
+          scheme: HTTPS
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      resources: {}
+      restartPolicy: Always
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: false
+        runAsNonRoot: true
+        runAsUser: 1002620000
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /var/run/kserve/tls
+        name: tls-certs
+        readOnly: true
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-5gvhv
+        readOnly: true
+    - args:
+      - hf://Qwen/Qwen3.8-27B
+      - /mnt/models
+      env:
+      - name: HF_HUB_ENABLE_HF_TRANSFER
+        value: "1"
+      - name: HF_XET_HIGH_PERFORMANCE
+        value: "1"
+      - name: HF_XET_NUM_CONCURRENT_RANGE_GETS
+        value: "8"
+      image: registry.redhat.io/rhoai/odh-kserve-storage-initializer-rhel9@sha256:0c14e5c65c86c1df8045e58cc8f465ee19f5e4daaf740f24a9619215820502ef
+      imagePullPolicy: IfNotPresent
+      name: storage-initializer
+      resources:
+        limits:
+          cpu: "1"
+          memory: 24Gi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        runAsNonRoot: true
+        runAsUser: 1002620000
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: FallbackToLogsOnError
+      volumeMounts:
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-5gvhv
+        readOnly: true
+    nodeName: a100-06
+    nodeSelector:
+      kubernetes.io/hostname: a100-06
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    resourceClaims:
+    - name: devices
+      resourceClaimTemplateName: qwen38-27b-tp1-aligned-roots
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 1002620000
+      seLinuxOptions:
+        level: s0:c51,c35
+      seccompProfile:
+        type: RuntimeDefault
+    serviceAccount: qwen38-27b-pd-tp1-kserve
+    serviceAccountName: qwen38-27b-pd-tp1-kserve
+    terminationGracePeriodSeconds: 60
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoSchedule
+      key: node.kubernetes.io/memory-pressure
+      operator: Exists
+    volumes:
+    - name: kserve-provision-location
+      persistentVolumeClaim:
+        claimName: qwen38-27b-decode-model-cache
+    - emptyDir: {}
+      name: home
+    - emptyDir: {}
+      name: tmp-dir
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 1Gi
+      name: dshm
+    - emptyDir: {}
+      name: model-cache
+    - name: tls-certs
+      secret:
+        defaultMode: 420
+        secretName: qwen38-27b-pd-tp1-kserve-self-signed-certs
+    - name: kube-api-access-5gvhv
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+        - configMap:
+            items:
+            - key: service-ca.crt
+              path: service-ca.crt
+            name: openshift-service-ca.crt
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:39:11Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:39:12Z"
+      observedGeneration: 1
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:43:50Z"
+      observedGeneration: 1
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:43:50Z"
+      observedGeneration: 1
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2026-09-17T20:39:09Z"
+      observedGeneration: 1
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: cri-o://757af5a1a8b9b33933921253d729565e61049b46f9bafe2c8b2f4b9d715431de
+      image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:ba060ec145e1b7ac3a3b25b89fc75f7d146746156990ff5858235eaa9d158e32
+      imageID: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:5d4434598dc702b89c8d63b9fa6e2378130abf649c95f4211fb93e325cfd7698
+      lastState: {}
+      name: main
+      ready: true
+      resources:
+        claims:
+        - name: devices
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2026-09-17T20:39:12Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          - 1002620000
+          uid: 1002620000
+      volumeMounts:
+      - mountPath: /home
+        name: home
+      - mountPath: /tmp
+        name: tmp-dir
+      - mountPath: /dev/shm
+        name: dshm
+      - mountPath: /models
+        name: model-cache
+      - mountPath: /var/run/kserve/tls
+        name: tls-certs
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-5gvhv
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 10.14.217.19
+    hostIPs:
+    - ip: 10.14.217.19
+    initContainerStatuses:
+    - containerID: cri-o://87687d4ec451a467d772616d18aecc0daf9d98f4daef73316f27d27f63dcc0e0
+      image: registry.redhat.io/rhoai/odh-llm-d-router-disagg-sidecar-rhel9@sha256:7fb626f057265afe80ffa26e7fb8389e2f18918579bc746bdc8145de3c7a26f1
+      imageID: registry.redhat.io/rhoai/odh-llm-d-router-disagg-sidecar-rhel9@sha256:370697dbde94ad6ec5184a6637947a08e1d8c52a803698ebe9bcb957400bfacc
+      lastState: {}
+      name: llm-d-routing-sidecar
+      ready: true
+      resources: {}
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2026-09-17T20:39:11Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          - 1002620000
+          uid: 1002620000
+      volumeMounts:
+      - mountPath: /var/run/kserve/tls
+        name: tls-certs
+        readOnly: true
+        recursiveReadOnly: Disabled
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-5gvhv
+        readOnly: true
+        recursiveReadOnly: Disabled
+    - allocatedResources:
+        cpu: 100m
+        memory: 100Mi
+      containerID: cri-o://604306312a7c993395079c651b819c456fbdf6fcb0c71659c4b7eaa6af6c3215
+      image: registry.redhat.io/rhoai/odh-kserve-storage-initializer-rhel9@sha256:0c14e5c65c86c1df8045e58cc8f465ee19f5e4daaf740f24a9619215820502ef
+      imageID: registry.redhat.io/rhoai/odh-kserve-storage-initializer-rhel9@sha256:0c14e5c65c86c1df8045e58cc8f465ee19f5e4daaf740f24a9619215820502ef
+      lastState: {}
+      name: storage-initializer
+      ready: true
+      resources:
+        limits:
+          cpu: "1"
+          memory: 24Gi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      restartCount: 0
+      started: false
+      state:
+        terminated:
+          containerID: cri-o://604306312a7c993395079c651b819c456fbdf6fcb0c71659c4b7eaa6af6c3215
+          exitCode: 0
+          finishedAt: "2026-09-17T20:39:12Z"
+          reason: Completed
+          startedAt: "2026-09-17T20:39:11Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          - 1002620000
+          uid: 1002620000
+      volumeMounts:
+      - mountPath: /mnt/models
+        name: kserve-provision-location
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-5gvhv
+        readOnly: true
+        recursiveReadOnly: Disabled
+    observedGeneration: 1
+    phase: Running
+    podIP: 10.131.4.34
+    podIPs:
+    - ip: 10.131.4.34
+    qosClass: Burstable
+    resourceClaimStatuses:
+    - name: devices
+      resourceClaimName: qwen38-27b-pd-tp1-kserve-6697f94486-ptcdt-devices-sc5fx
+    startTime: "2026-09-17T20:39:09Z"
+kind: List
+metadata:
+  resourceVersion: ""

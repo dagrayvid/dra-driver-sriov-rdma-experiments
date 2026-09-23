@@ -1,0 +1,17 @@
+case=cross-numa
+server=dra-sriov-test/ib-write-bw-misaligned-server
+client=dra-sriov-test/ib-write-bw-misaligned-client
+server_ip=10.128.6.162
+runs=10
+message_size_bytes=8388608
+iterations=5000
+direction=reverse
+gpu_bdf=0000:c3:00.0
+gpu_root=pci0000:b9
+gpu_numa=1
+vf_bdf=0000:11:00.1
+pf_bdf=0000:11:00.0
+vf_root=pci0000:00
+vf_numa=0
+started_utc=2026-09-22T17:38:43Z
+completed_utc=2026-09-22T17:40:55Z

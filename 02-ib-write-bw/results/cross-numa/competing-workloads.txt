@@ -1,0 +1,1 @@
+No other active GPU- or DRA-consuming pods found on the benchmark nodes.

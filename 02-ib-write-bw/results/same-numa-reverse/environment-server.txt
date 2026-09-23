@@ -1,0 +1,20 @@
+ib_write_bw: Version: 6.27
+HCA: mlx5_9
+GPU: NVIDIA A100-SXM4-80GB, 00000000:4B:00.0
+CA 'mlx5_9'
+	CA type: MT4124
+	Number of ports: 1
+	Firmware version: 20.40.1000
+	Hardware version: 0
+	Node GUID: 0xeee453db16eda8b8
+	System image GUID: 0xb83fd2030027a85e
+	Port 1:
+		State: Active
+		Physical state: LinkUp
+		Rate: 200
+		Base lid: 36
+		LMC: 0
+		SM lid: 38
+		Capability mask: 0xa651ec48
+		Port GUID: 0xeee453db16eda8b8
+		Link layer: InfiniBand

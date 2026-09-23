@@ -1,0 +1,2 @@
+decode qwen38-27b-pd-tp1-kserve-84cfdbd584-khgd9
+prefill qwen38-27b-pd-tp1-kserve-prefill-69966df4fd-kdjjs
