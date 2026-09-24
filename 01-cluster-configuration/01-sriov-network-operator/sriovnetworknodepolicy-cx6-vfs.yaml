@@ -1,0 +1,30 @@
+# ConnectX-6 InfiniBand VFs for a100-04 / a100-06 only.
+# numVfs: 1 => one VF per listed PF (eight VFs per labeled node).
+# linkType: ib is required for mlx5 IB (isRdma alone is not enough).
+# Applying this policy may require VF enablement (mlxconfig) and a reboot;
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: cx6-vfs
+  namespace: openshift-sriov-network-operator
+spec:
+  resourceName: cx6_vfs
+  priority: 10
+  numVfs: 1
+  deviceType: netdevice
+  linkType: ib
+  isRdma: true
+  nodeSelector:
+    dra-sriov-cx6: "true"
+  nicSelector:
+    vendor: "15b3"
+    deviceID: "101b"
+    pfNames:
+      - ibp14s0
+      - ibp17s0
+      - ibp82s0
+      - ibp83s0
+      - ibp139s0
+      - ibp142s0
+      - ibp199s0
+      - ibp202s0

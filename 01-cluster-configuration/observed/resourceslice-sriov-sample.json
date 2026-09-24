@@ -1,0 +1,70 @@
+{
+  "apiVersion": "resource.k8s.io/v1",
+  "kind": "ResourceSlice",
+  "metadata": {
+    "name": "00000-sriovnetwork.k8snetworkplumbingwg.io-a100-04-d6rd5"
+  },
+  "spec": {
+    "driver": "sriovnetwork.k8snetworkplumbingwg.io",
+    "nodeName": "a100-04",
+    "pool": {
+      "generation": 1,
+      "name": "a100-04",
+      "resourceSliceCount": 1
+    },
+    "deviceCount": 8,
+    "devices": [
+      {
+        "name": "0000-c7-00-1",
+        "attributes": {
+          "dra.net/numaNode": {
+            "int": 1
+          },
+          "k8s.cni.cncf.io/deviceID": {
+            "string": "0000:c7:00.1"
+          },
+          "resource.kubernetes.io/pciBusID": {
+            "string": "0000:c7:00.1"
+          },
+          "resource.kubernetes.io/pcieRoot": {
+            "string": "pci0000:b9"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/EswitchMode": {
+            "string": "legacy"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/PFName": {
+            "string": "ibp199s0"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/deviceID": {
+            "string": "101c"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/linkType": {
+            "string": "infiniband"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/pciAddress": {
+            "string": "0000:c7:00.1"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/pfDeviceID": {
+            "string": "101b"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/pfPciAddress": {
+            "string": "0000:c7:00.0"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/rdmaCapable": {
+            "bool": true
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/resourceName": {
+            "string": "cx6_vfs"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/vendor": {
+            "string": "15b3"
+          },
+          "sriovnetwork.k8snetworkplumbingwg.io/vfID": {
+            "int": 0
+          }
+        }
+      }
+    ]
+  },
+  "_comment": "Sample only: first VF device from a100-04. Full slice has deviceCount 8 (one VF per PF). Captured 2026-09-24T19:30:21Z."
+}

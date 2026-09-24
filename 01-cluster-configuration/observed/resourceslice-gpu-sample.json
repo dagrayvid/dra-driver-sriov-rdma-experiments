@@ -1,0 +1,63 @@
+{
+  "apiVersion": "resource.k8s.io/v1",
+  "kind": "ResourceSlice",
+  "metadata": {
+    "name": "00000-gpu.nvidia.com-a100-04-wr6h2"
+  },
+  "spec": {
+    "driver": "gpu.nvidia.com",
+    "nodeName": "a100-04",
+    "pool": {
+      "generation": 1,
+      "name": "a100-04",
+      "resourceSliceCount": 1
+    },
+    "deviceCount": 8,
+    "devices": [
+      {
+        "name": "gpu-4",
+        "attributes": {
+          "addressingMode": {
+            "string": "HMM"
+          },
+          "architecture": {
+            "string": "Ampere"
+          },
+          "brand": {
+            "string": "Nvidia"
+          },
+          "cudaComputeCapability": {
+            "version": "8.0.0"
+          },
+          "cudaDriverVersion": {
+            "version": "13.2.0"
+          },
+          "driverVersion": {
+            "version": "595.71.5"
+          },
+          "productName": {
+            "string": "NVIDIA A100-SXM4-80GB"
+          },
+          "resource.kubernetes.io/pciBusID": {
+            "string": "0000:c0:00.0"
+          },
+          "resource.kubernetes.io/pcieRoot": {
+            "string": "pci0000:b9"
+          },
+          "type": {
+            "string": "gpu"
+          },
+          "uuid": {
+            "string": "GPU-62946793-c661-91e1-c50b-aa61563c1166"
+          }
+        },
+        "capacity": {
+          "memory": {
+            "value": "80Gi"
+          }
+        }
+      }
+    ]
+  },
+  "_comment": "Sample only: first GPU device from a100-04. Full slice has deviceCount 8. Note shared pcieRoot pci0000:b9 with the SR-IOV sample VF. Captured 2026-09-24T19:30:21Z."
+}
