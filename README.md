@@ -11,10 +11,10 @@ The experiments cover:
 
 ## Repository layout
 
-- [`01-cluster-configuration/`](01-cluster-configuration/) is reserved for the
-  cluster-level `dra-driver-sriov`, SR-IOV, NetworkAttachmentDefinition, and
-  GPU DRA configuration. This section is intentionally incomplete pending
-  review by the cluster owner who installed the driver.
+- [`01-cluster-configuration/`](01-cluster-configuration/) contains the
+  cluster-level SR-IOV policy, DRA CRs, and InfiniBand NetworkAttachmentDefinition
+  used on the experiment workers, plus a read-only `observed/` snapshot of
+  sample `ResourceSlice` devices.
 - [`02-ib-write-bw/`](02-ib-write-bw/) contains a
   [portable aligned claim](02-ib-write-bw/aligned-resourceclaimtemplate.yaml),
   three deterministic benchmark placements, the runner, validation tools, and

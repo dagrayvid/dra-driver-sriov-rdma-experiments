@@ -1,0 +1,11 @@
+apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+kind: DeviceAttributes
+metadata:
+  name: cx6-vfs-attrs
+  namespace: dra-driver-sriov
+  labels:
+    pool: cx6-vfs
+spec:
+  attributes:
+    sriovnetwork.k8snetworkplumbingwg.io/resourceName:
+      string: "cx6_vfs"

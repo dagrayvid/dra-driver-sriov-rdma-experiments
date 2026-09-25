@@ -1,0 +1,18 @@
+# InfiniBand VF attachment for dra-driver-sriov VfConfig.netAttachDefName: cx6-vf.
+# Use type ib-sriov with link_state enable so the VF vport policy goes Up and the
+# subnet manager can assign a LID. Do not use Ethernet type "sriov" on mlx5 IB VFs
+# (leaves policy=Down / lid 65535).
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: cx6-vf
+  namespace: dra-sriov-test
+spec:
+  config: |-
+    {
+        "cniVersion": "1.0.0",
+        "name": "cx6-vf",
+        "type": "ib-sriov",
+        "link_state": "enable",
+        "logLevel": "info"
+    }

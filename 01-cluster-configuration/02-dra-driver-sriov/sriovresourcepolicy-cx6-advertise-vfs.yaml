@@ -1,0 +1,31 @@
+# Advertise ConnectX-6 IB VFs as resourceName cx6_vfs on labeled nodes.
+# resourceFilters match VF inventory
+apiVersion: sriovnetwork.k8snetworkplumbingwg.io/v1alpha1
+kind: SriovResourcePolicy
+metadata:
+  name: cx6-advertise-vfs
+  namespace: dra-driver-sriov
+spec:
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: dra-sriov-cx6
+            operator: In
+            values:
+              - "true"
+  configs:
+    - deviceAttributesSelector:
+        matchLabels:
+          pool: cx6-vfs
+      resourceFilters:
+        - vendors: ["15b3"]
+          linkType: ib
+          pfNames:
+            - ibp14s0
+            - ibp17s0
+            - ibp82s0
+            - ibp83s0
+            - ibp139s0
+            - ibp142s0
+            - ibp199s0
+            - ibp202s0
